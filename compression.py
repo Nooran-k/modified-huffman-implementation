@@ -1,8 +1,7 @@
 import json
 import os
 
-# The exact number of bits we will use to store a rare character
-RAW_BITS = 16 
+RAW_BITS = 8 
 
 def compress(input_path, output_path, code_table):
     """
@@ -34,8 +33,8 @@ def compress(input_path, output_path, code_table):
             
             # Get the raw number value of the character (its ASCII/Unicode value)
             char_number = ord(char)
-            # Convert that number into a 16-bit binary string (e.g., "0000000001100001")
-            char_binary = format(char_number, "016b")
+            # Convert that number into a 8-bit binary string (e.g., "0000000001100001")
+            char_binary = format(char_number, "08b")
             
             # Add the original symbol code right after the "Others" code
             bit_string = bit_string + char_binary
@@ -55,6 +54,18 @@ def compress(input_path, output_path, code_table):
     # 4. Pack the '0' and '1' string into actual binary bytes
     byte_list = []
     i = 0
-    # Read through our string 8 characters at a time
     while i < len(bit_string):
-        byte_chunk = bit_string
+        byte_chunk = bit_string[i : i + 8]
+        byte_list.append(int(byte_chunk, 2))
+        i = i + 8
+
+    payload_bytes = bytes(byte_list)
+
+    # 5. Write the JSON header, a newline, then the packed bytes
+    header_dict = {"table": code_table, "pad": pad_length, "length": len(text)}
+    header_bytes = json.dumps(header_dict, separators=(",", ":")).encode("utf-8")
+    out_file = open(output_path, "wb")
+    out_file.write(header_bytes)
+    out_file.write(b"\n")
+    out_file.write(payload_bytes)
+    out_file.close()
